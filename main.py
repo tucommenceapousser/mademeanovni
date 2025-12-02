@@ -1,7 +1,6 @@
 import streamlit as st
 import json
 import os
-import reportlab
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from datetime import datetime
@@ -12,9 +11,9 @@ st.set_page_config(
     layout="wide"
 )
 
-# --------------------------
+# ---------------------------------------
 # STYLE HACKER DARK
-# --------------------------
+# ---------------------------------------
 st.markdown("""
 <style>
 body {
@@ -33,16 +32,34 @@ h1,h2,h3 {
 .sidebar .sidebar-content {
     background:#111111;
 }
+.device-preview {
+    padding: 15px;
+    border: 1px solid #00ff88;
+    border-radius: 12px;
+    background-color: #111111;
+}
 </style>
 """, unsafe_allow_html=True)
 
 st.title("🛠️ TRHACKNON Custom Devices")
 st.write("Crée ton appareil sur mesure : hardware + firmware + options + accessoires.")
+st.write("---")
 
+# ---------------------------------------
+# IMAGES POUR CERTAINS APPAREILS
+# ---------------------------------------
+device_images = {
+    "LilyGO T-Display S3": "lilygo.jpeg",
+    "LilyGO T-Deck": "lilygo.jpeg",
+    "LilyGO T-Pico": "lilygo.jpeg",
+    "BjornOS": "bjorn.jpg",
+    "Pwnagotchi": "pwnagotchi.webp",
+    "ESP32 Marauder": "marauder.jpeg",
+}
 
-# --------------------------
-# BASE DE PRIX
-# --------------------------
+# ---------------------------------------
+# BASE PRIX
+# ---------------------------------------
 boards = {
     "ESP32 DevKit": 25,
     "ESP32-S3": 35,
@@ -54,6 +71,7 @@ boards = {
     "Heltec CubeCell": 30,
     "Raspberry Pi Zero 2 W": 60,
     "Bus Pirate v6": 45,
+    "ESP32 Marauder": 75
 }
 
 modules = {
@@ -84,7 +102,10 @@ options = {
     "Batterie intégrée & câblage": 7
 }
 
-col1, col2 = st.columns(2)
+# ---------------------------------------
+# INTERFACE PRINCIPALE
+# ---------------------------------------
+col1, col2 = st.columns([1, 1])
 
 with col1:
     st.subheader("1️⃣ Sélectionne la carte principale")
@@ -101,15 +122,43 @@ with col2:
     st.subheader("4️⃣ Options supplémentaires")
     user_options = st.multiselect("Options :", list(options.keys()))
 
-# --------------------------
-# CALCUL PRIX
-# --------------------------
-total = base_price
-for m in user_modules:
-    total += modules[m]
-for o in user_options:
-    total += options[o]
+# ---------------------------------------
+# AFFICHAGE D'IMAGE SI DISPONIBLE
+# ---------------------------------------
+st.write("---")
+st.subheader("📸 Aperçu du matériel")
 
+preview_col = st.container()
+with preview_col:
+    st.markdown('<div class="device-preview">', unsafe_allow_html=True)
+
+    img_displayed = False
+
+    # Affiche image liée au firmware (ex : Bjorn, Pwnagotchi)
+    if firmware in device_images:
+        image_path = device_images[firmware]
+        if os.path.exists(image_path):
+            st.image(image_path, caption=f"Firmware : {firmware}")
+            img_displayed = True
+
+    # Affiche image liée à la carte (ex : LilyGO)
+    if not img_displayed and board in device_images:
+        image_path = device_images[board]
+        if os.path.exists(image_path):
+            st.image(image_path, caption=f"Appareil : {board}")
+            img_displayed = True
+
+    if not img_displayed:
+        st.markdown("🕶️ _Aucune image disponible pour cet appareil._")
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+st.write("---")
+
+# ---------------------------------------
+# CALCUL PRIX
+# ---------------------------------------
+total = base_price + sum(modules[m] for m in user_modules) + sum(options[o] for o in user_options)
 st.markdown(f"## 💰 Total : **{total} €**")
 
 buyer_name = st.text_input("Nom client :")
@@ -118,9 +167,10 @@ add_notes = st.text_area("Notes spécifiques (couleur boîtier, dimensions, modi
 
 st.write("---")
 
-# --------------------------
-# GENERATE PDF QUOTE
-# --------------------------
+
+# ---------------------------------------
+# PDF DEVIS
+# ---------------------------------------
 def generate_pdf(name, email, total, filename):
     c = canvas.Canvas(filename, pagesize=A4)
     c.setFont("Helvetica", 14)
@@ -152,7 +202,9 @@ def generate_pdf(name, email, total, filename):
     c.drawString(50, y - 15, f"Total : {total} €")
     c.save()
 
-
+# ---------------------------------------
+# BOUTON PDF
+# ---------------------------------------
 if st.button("📄 Générer devis PDF"):
     if buyer_name.strip() == "" or buyer_email.strip() == "":
         st.error("Merci d’entrer nom + email pour générer un devis.")
