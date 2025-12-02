@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import os
+import reportlab
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from datetime import datetime
